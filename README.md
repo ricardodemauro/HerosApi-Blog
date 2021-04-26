@@ -12,3 +12,12 @@ const project = {
   acceptContributions: true
 };
 ```
+
+
+## Table of Contents
+
+- Health Check https://rmauro.dev/adding-health-checks-to-net-core-application/
+- Mongo Db CRUD [In Progress]
+- Swagger Open API [In Progress]
+- Custom Endpoint [In Progress]
+- Configuration / Options [In Progress]
