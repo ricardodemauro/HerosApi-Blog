@@ -1,13 +1,18 @@
 using HerosApi.Configuration;
 using HerosApi.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
+using System.Linq;
+using System.Net.Mime;
+using System.Text.Json;
 
 namespace HerosApi
 {
@@ -33,6 +38,11 @@ namespace HerosApi
             services.AddTransient<HeroService>();
 
             services.AddSwaggerGen();
+
+            services.AddHealthChecks()
+                .AddMongoDb(mongodbConnectionString: _configuration["DatabaseSettings:ConnectionString"],
+                            name: "MongoDb",
+                            failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -61,6 +71,25 @@ namespace HerosApi
                 endpoints.Map(pattern: "/swagger/*", pipeline);
 
                 endpoints.MapDefaultControllerRoute();
+
+                endpoints.MapHealthChecks("/healthcheck");
+
+                endpoints.MapHealthChecks("/healthcheck-details",
+                    new HealthCheckOptions
+                    {
+                        ResponseWriter = async (context, report) =>
+                        {
+                            var result = JsonSerializer.Serialize(
+                                new
+                                {
+                                    status = report.Status.ToString(),
+                                    monitors = report.Entries.Select(e => new { key = e.Key, value = Enum.GetName(typeof(HealthStatus), e.Value.Status) })
+                                });
+                            context.Response.ContentType = MediaTypeNames.Application.Json;
+                            await context.Response.WriteAsync(result);
+                        }
+                    }
+                );
             });
 
             app.UseSwaggerUI();
